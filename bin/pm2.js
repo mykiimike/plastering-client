@@ -1,14 +1,9 @@
-
-
 const sc = require('subcommander');
 const fs = require('fs');
-
 
 sc.command('pm2', {
   desc: 'Build PM2 command line',
   callback: async function (options) {
-
-
     var opts = ''
     for(var key in options) opts += ` --${key} ${options[key]}`
 

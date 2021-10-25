@@ -2,6 +2,7 @@
 
 const sc = require('subcommander');
 const fs = require('fs');
+const zlib = require('zlib');
 const readline = require("readline");
 const axios = require("axios");
 const cliProgress = require('cli-progress');
@@ -63,10 +64,23 @@ sc.command('digest', {
       process.exit(-1);
     }
 
-    const st = fs.createReadStream(file);
+    // open the source stream 
+    var st = fs.createReadStream(file);
+
+    // support gziped files
+    if(/\.gz$/.test(file)) {
+      const intermediate = zlib.createGunzip();
+      st.pipe(intermediate);
+
+      // swap stream source
+      st = intermediate;
+    }
+
+    // readline interface
     const rl = readline.createInterface({
       input: st
     });
+
     rl.on('line', async (input) => {
       const msg = {
         message: input
