@@ -9,12 +9,7 @@ var EC = require('elliptic').ec;
 
 var wallet = sc.command('wallet', {
   desc: 'wallet'
-}).option('dataDir', {
-  abbr: 'd',
-  desc: 'Data directory',
-  default: `${os.homedir()}/.plastering`
 });
-
 
 wallet.command('show', {
   desc: 'Search information about an IPv4/IPv6',
