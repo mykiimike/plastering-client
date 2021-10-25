@@ -53,7 +53,7 @@ sc.command('digest', {
         bar1.stop();
         process.exit(0)
       }
-      return (setTimeout(dequeue, 1000))
+      return (setImmediate(dequeue))
     }
     setTimeout(dequeue, 1000)
 
