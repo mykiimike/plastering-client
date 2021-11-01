@@ -67,7 +67,7 @@ function InitWallet(options) {
   return (ret);
 }
 
-function GetWalletToken(wallet) {
+function GetWalletToken(wallet, options) {
   const ret = { headers: {} }
   const payload = {
     timing: Date.now(),
@@ -87,6 +87,10 @@ function GetWalletToken(wallet) {
   const signature = wallet.priv.sign(hash);
   ret.headers[`x-sign`] = signature.toDER("hex");
 
+  // impersonate
+  if(options && options.impersonate) {
+    ret.headers[`x-impersonate`] = options.impersonate;
+  }
   return (ret)
 }
 
