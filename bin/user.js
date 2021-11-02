@@ -64,3 +64,14 @@ user.command('list', {
 
   }
 });
+
+user.command('password', {
+  desc: 'Change user password',
+  callback: async function (options) {
+    InitNetwork(options);
+    const wallet = InitWallet(options);
+    const post = { id: options[0] }
+    const ret = await axios.postCheck(RouteNetwork("user/password"), post, GetWalletToken(wallet));
+    console.log(ret)
+  }
+});

@@ -37,6 +37,33 @@ trigger.command('list', {
     InitNetwork(options);
     const wallet = InitWallet(options);
     const ret = await axios.postCheck(RouteNetwork("trigger/list"), null, GetWalletToken(wallet, options));
-    console.log(ret)
+    if (ret) {
+
+      // instantiate
+      var table = new Table({
+        head: ['ID', 'Name', 'Unit', 'CIDR']
+      });
+
+      const ipvUnit = {
+        ipv4: 0,
+        ipv6: 0
+      }
+
+      for (var line of ret.list) {
+        table.push([
+          line.id,
+          line.description || '',
+          line.unit,
+          `${line.start}/${line.mask}`
+        ])
+
+        if (line.start.indexOf(":") > 0) ipvUnit.ipv6 += line.unit;
+        else ipvUnit.ipv4 += line.unit;
+      }
+      console.log(table.toString());
+
+      console.log(`Total IPv4 Bits Unit: ${ipvUnit.ipv4}`)
+      console.log(`Total IPv6 Bits Unit: ${ipvUnit.ipv6}`)
+    }
   }
 });
