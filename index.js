@@ -94,6 +94,63 @@ function GetWalletToken(wallet, options) {
   return (ret)
 }
 
+class MultiQueueList {
+  constructor() {
+    this.receivers = {}
+  }
+
+  push(id, data) {
+    if (!this.scheduler) this.scheduler = setTimeout(this.tick.bind(this), 100)
+    this.receivers[id].queue.push(data);
+  }
+  receiver(id, cb) {
+    this.receivers[id] = {
+      queue: [],
+      cb
+    }
+  }
+
+  async tick() {
+    var count = 0;
+
+    for (var id in this.receivers) {
+      const entry = this.receivers[id];
+      const { queue, cb } = entry;
+
+      const list = [];
+
+      for (var a = 0; a < 200; a++) {
+        const item = queue.shift();
+        if (!item) break;
+        list.push(item)
+        count++;
+      }
+      if (list.length > 0) {
+        await cb(list)
+      }
+    }
+    if (count > 0)
+      this.scheduler = setImmediate(this.tick.bind(this))
+    else
+      this.scheduler = setTimeout(this.tick.bind(this), 1000)
+  }
+
+
+  async waitEnd() {
+    await new Promise((accept)=>{
+      function check() {
+        var count = 0;
+        for (var id in this.receivers) count += this.receivers[id].queue.length;
+        if(count > 0) {
+          return(setTimeout(check, 1000))
+        }
+        accept();
+      } 
+      setTimeout(check, 1000)
+    })
+  }
+}
+
 module.exports = {
   InitWallet,
   GetWalletToken,
@@ -101,5 +158,6 @@ module.exports = {
   GetNetwork,
   SetNetwork,
   RouteNetwork,
-  Networks
+  Networks,
+  MultiQueueList
 }
