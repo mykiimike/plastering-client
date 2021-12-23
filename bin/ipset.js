@@ -12,15 +12,12 @@ var ipset = sc.command('ipset', {
   desc: 'Linux IPset controler'
 })
 
-
 function exec(cmd) {
   console.log(cmd)
   try {
     execSync(cmd, { stdio: 'inherit' })
   } catch (e) { }
-
 }
-
 
 ipset.command('init', {
   desc: 'Initialize Linux ipset stream controler',
@@ -29,32 +26,15 @@ ipset.command('init', {
 
     exec(`iptables -D INPUT -j INPUT_BL`)
     exec(`iptables -D OUTPUT -j OUTPUT_BL`)
+    exec(`iptables -D FORWARD -j FORWARD_BL`)
+
     exec(`iptables -F INPUT_BL`)
     exec(`iptables -F OUTPUT_BL`)
+    exec(`iptables -F FORWARD_BL`)
+
     exec(`iptables -N INPUT_BL`)
     exec(`iptables -N OUTPUT_BL`)
-
-    exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4NET dst -j LOG --log-prefix "PLASTERING NET OUTPUT "`)
-    exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4NET dst -j DROP`)
-
-    exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4NET dst -j LOG --log-prefix "PLASTERING NET OUTPUT "`)
-    exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4NET dst -j DROP`)
-
-    exec(`iptables -A FORWARD_BL -m set --match-set blacklistv4NET dst -j LOG --log-prefix "PLASTERING NET FORWARD "`)
-    exec(`iptables -A FORWARD_BL -m set --match-set blacklistv4NET dst -j DROP`)
-
-    exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4NET dst -j LOG --log-prefix "PLASTERING NET FORWARD "`)
-    exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4NET dst -j DROP`)
-
-    exec(`iptables -A INPUT_BL -m set --match-set blacklistv4IP src -j LOG --log-prefix "PLASTERING IP INPUT "`)
-    exec(`iptables -A INPUT_BL -m set --match-set blacklistv4IP src -j DROP`)
-
-    exec(`iptables -A INPUT_BL -m set --match-set blacklistv4IP src -j LOG --log-prefix "PLASTERING IP INPUT "`)
-    exec(`iptables -A INPUT_BL -m set --match-set blacklistv4IP src -j DROP`)
-
-    exec(`iptables -A INPUT -j INPUT_BL`)
-    exec(`iptables -A OUTPUT -j OUTPUT_BL`)
-    exec(`iptables -A FORWARD -j FORWARD_BL`)
+    exec(`iptables -N FORWARD_BL`)
 
     // load blacklist
     const ipsetCurrentFile = `${options.dataDir}/current.ipset`;
@@ -88,6 +68,28 @@ ipset.command('init', {
           exec(`ipset flush blacklistv4IP`)
           exec(`ipset flush blacklistv4NET`)
           exec(`ipset restore -! < ${ipsetExecFile}`)
+
+          exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4NET dst -j LOG --log-prefix "PLASTERING NET OUTPUT "`)
+          exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4NET dst -j DROP`)
+      
+          exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4IP dst -j LOG --log-prefix "PLASTERING IP OUTPUT "`)
+          exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4IP dst -j DROP`)
+      
+          exec(`iptables -A FORWARD_BL -m set --match-set blacklistv4NET dst -j LOG --log-prefix "PLASTERING NET FORWARD "`)
+          exec(`iptables -A FORWARD_BL -m set --match-set blacklistv4NET dst -j DROP`)
+      
+          exec(`iptables -A FORWARD_BL -m set --match-set blacklistv4IP dst -j LOG --log-prefix "PLASTERING IP FORWARD "`)
+          exec(`iptables -A FORWARD_BL -m set --match-set blacklistv4IP dst -j DROP`)
+      
+          exec(`iptables -A INPUT_BL -m set --match-set blacklistv4NET src -j LOG --log-prefix "PLASTERING NET INPUT "`)
+          exec(`iptables -A INPUT_BL -m set --match-set blacklistv4NET src -j DROP`)
+      
+          exec(`iptables -A INPUT_BL -m set --match-set blacklistv4IP src -j LOG --log-prefix "PLASTERING IP INPUT "`)
+          exec(`iptables -A INPUT_BL -m set --match-set blacklistv4IP src -j DROP`)
+      
+          exec(`iptables -A INPUT -j INPUT_BL`)
+          exec(`iptables -A OUTPUT -j OUTPUT_BL`)
+          exec(`iptables -A FORWARD -j FORWARD_BL`)
         });
 
       })
@@ -144,9 +146,6 @@ ipset.command('stream', {
           setTimeout(update, 5 * 60 * 1000)
         })
       })
-
-
-
     }
 
     update();
