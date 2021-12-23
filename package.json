@@ -16,7 +16,6 @@
     "cli-progress": "^3.9.1",
     "cli-table": "^0.3.6",
     "elliptic": "^6.5.4",
-    "jest-diff": "^27.3.0",
     "subcommander": "^1.0.0",
     "tail": "^2.2.4"
   }
