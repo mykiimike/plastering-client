@@ -75,11 +75,11 @@ ipset.command('init', {
           exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4IP dst -j LOG --log-prefix "PLASTERING IP OUTPUT "`)
           exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4IP dst -j DROP`)
       
-          exec(`iptables -A FORWARD_BL -m set --match-set blacklistv4NET dst -j LOG --log-prefix "PLASTERING NET FORWARD "`)
-          exec(`iptables -A FORWARD_BL -m set --match-set blacklistv4NET dst -j DROP`)
+          exec(`iptables -A FORWARD_BL -m set --match-set blacklistv4NET dst,src -j LOG --log-prefix "PLASTERING NET FORWARD "`)
+          exec(`iptables -A FORWARD_BL -m set --match-set blacklistv4NET dst,src -j DROP`)
       
-          exec(`iptables -A FORWARD_BL -m set --match-set blacklistv4IP dst -j LOG --log-prefix "PLASTERING IP FORWARD "`)
-          exec(`iptables -A FORWARD_BL -m set --match-set blacklistv4IP dst -j DROP`)
+          exec(`iptables -A FORWARD_BL -m set --match-set blacklistv4IP dst,src -j LOG --log-prefix "PLASTERING IP FORWARD "`)
+          exec(`iptables -A FORWARD_BL -m set --match-set blacklistv4IP dst,src -j DROP`)
       
           exec(`iptables -A INPUT_BL -m set --match-set blacklistv4NET src -j LOG --log-prefix "PLASTERING NET INPUT "`)
           exec(`iptables -A INPUT_BL -m set --match-set blacklistv4NET src -j DROP`)
