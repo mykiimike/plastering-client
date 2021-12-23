@@ -10,6 +10,7 @@ function GetNetwork() {
   return (Networks[0])
 }
 
+
 function SetNetwork(array) {
   do { } while (Networks.shift())
 

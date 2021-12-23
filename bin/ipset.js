@@ -12,11 +12,15 @@ var ipset = sc.command('ipset', {
   desc: 'Linux IPset controler'
 })
 
+
 function exec(cmd) {
+  console.log(cmd)
   try {
-    execSync(cmd)
+    execSync(cmd, { stdio: 'inherit' })
   } catch (e) { }
+
 }
+
 
 ipset.command('init', {
   desc: 'Initialize Linux ipset stream controler',
@@ -30,35 +34,62 @@ ipset.command('init', {
     exec(`iptables -N INPUT_BL`)
     exec(`iptables -N OUTPUT_BL`)
 
-    exec(`ipset destroy blacklistv4`)
-    exec(`ipset create blacklistv4 hash:ip family inet maxelem 10000000`)
+    exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4NET dst -j LOG --log-prefix "PLASTERING NET OUTPUT "`)
+    exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4NET dst -j DROP`)
 
-    exec(`iptables -A INPUT_BL -m set --match-set blacklistv4 src -j LOG --log-prefix "reoffending input "`)
-    exec(`iptables -A INPUT_BL -m set --match-set blacklistv4 src -j DROP`)
+    exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4NET dst -j LOG --log-prefix "PLASTERING NET OUTPUT "`)
+    exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4NET dst -j DROP`)
 
-    exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4 dst -j LOG --log-prefix "reoffending output "`)
-    exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4 dst -j DROP`)
+    exec(`iptables -A FORWARD_BL -m set --match-set blacklistv4NET dst -j LOG --log-prefix "PLASTERING NET FORWARD "`)
+    exec(`iptables -A FORWARD_BL -m set --match-set blacklistv4NET dst -j DROP`)
+
+    exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4NET dst -j LOG --log-prefix "PLASTERING NET FORWARD "`)
+    exec(`iptables -A OUTPUT_BL -m set --match-set blacklistv4NET dst -j DROP`)
+
+    exec(`iptables -A INPUT_BL -m set --match-set blacklistv4IP src -j LOG --log-prefix "PLASTERING IP INPUT "`)
+    exec(`iptables -A INPUT_BL -m set --match-set blacklistv4IP src -j DROP`)
+
+    exec(`iptables -A INPUT_BL -m set --match-set blacklistv4IP src -j LOG --log-prefix "PLASTERING IP INPUT "`)
+    exec(`iptables -A INPUT_BL -m set --match-set blacklistv4IP src -j DROP`)
 
     exec(`iptables -A INPUT -j INPUT_BL`)
     exec(`iptables -A OUTPUT -j OUTPUT_BL`)
+    exec(`iptables -A FORWARD -j FORWARD_BL`)
 
     // load blacklist
     const ipsetCurrentFile = `${options.dataDir}/current.ipset`;
     const st = fs.createWriteStream(ipsetCurrentFile);
 
+    const ipsetExecFile = `${options.dataDir}/exec.ipset`;
+    const execSt = fs.createWriteStream(ipsetExecFile);
+
+    execSt.write(`create blacklistv4IP hash:ip family inet hashsize 65536 maxelem 10000000\n`)
+    execSt.write(`create blacklistv4NET hash:net family inet hashsize 65536 maxelem 10000000\n`)
+
     // touch current
     axios({
       method: 'get',
-      url: RouteNetwork(`blacklist`),
+      url: RouteNetwork(`blacklist/v4`),
       responseType: 'stream'
     }).then(function (response) {
       response.data.pipe(st);
       st.on('finish', () => {
         const list = fs.readFileSync(ipsetCurrentFile, "utf-8").split('\n')
         list.forEach((el) => {
-          if (el.length > 0)
-            exec(`ipset add blacklistv4 ${el}`);
+          if (el.length === 0) return;
+          const spl = el.split("/")
+          if (spl.length === 1)
+            execSt.write(`add blacklistv4IP ${el}\n`);
+          else if (spl.length === 2)
+            execSt.write(`add blacklistv4NET ${el}\n`);
         })
+        st.close();
+        execSt.close(() => {
+          exec(`ipset flush blacklistv4IP`)
+          exec(`ipset flush blacklistv4NET`)
+          exec(`ipset restore -! < ${ipsetExecFile}`)
+        });
+
       })
     })
   }
@@ -69,56 +100,53 @@ ipset.command('stream', {
   callback: async function (options) {
     InitNetwork(options);
 
-    const ipsetCurrentFile = `${options.dataDir}/current.ipset`;
-    const ipsetNextFile = `${options.dataDir}/next.ipset`;
+
 
     function update() {
-      const st = fs.createWriteStream(ipsetNextFile);
+      // load blacklist
+      const ipsetCurrentFile = `${options.dataDir}/current.ipset`;
+      const st = fs.createWriteStream(ipsetCurrentFile);
+
+      const ipsetExecFile = `${options.dataDir}/exec.ipset`;
+      const execSt = fs.createWriteStream(ipsetExecFile);
+
+      execSt.write(`create blacklistv4IP_next hash:ip family inet hashsize 65536 maxelem 10000000\n`)
+      execSt.write(`create blacklistv4NET_next hash:net family inet hashsize 65536 maxelem 10000000\n`)
 
       // touch current
-      try {
-        fs.statSync(ipsetCurrentFile)
-      } catch (e) { fs.writeFileSync(ipsetCurrentFile, "") }
-
       axios({
         method: 'get',
-        url: RouteNetwork(`blacklist`),
+        url: RouteNetwork(`blacklist/v4`),
         responseType: 'stream'
       }).then(function (response) {
         response.data.pipe(st);
-
         st.on('finish', () => {
-          console.error(`dequeue ends`)
-
-          var differences = diffLinesRaw(
-            fs.readFileSync(ipsetCurrentFile, "utf-8").split('\n'),
-            fs.readFileSync(ipsetNextFile, "utf-8").split('\n')
-          ); // produces diff array
-
-          differences.forEach((a) => {
-            const op = a[0];
-            if (op === -1) {
-              const cmd = `ipset del blacklistv4 ${a[1]}`;
-              console.log(cmd); exec(cmd)
-            }
+          const list = fs.readFileSync(ipsetCurrentFile, "utf-8").split('\n')
+          list.forEach((el) => {
+            if (el.length === 0) return;
+            const spl = el.split("/")
+            if (spl.length === 1)
+              execSt.write(`add blacklistv4IP_next ${el}\n`);
+            else if (spl.length === 2)
+              execSt.write(`add blacklistv4NET_next ${el}\n`);
           })
+          st.close();
+          execSt.close(() => {
+            exec(`ipset flush blacklistv4IP_next`)
+            exec(`ipset flush blacklistv4NET_next`)
+            exec(`ipset restore -! < ${ipsetExecFile}`)
+            exec(`ipset swap blacklistv4IP_next blacklistv4IP`)
+            exec(`ipset swap blacklistv4NET_next blacklistv4NET`)
+            exec(`ipset destroy blacklistv4IP_next`)
+            exec(`ipset destroy blacklistv4NET_next`)
+          });
 
-          differences.forEach((a) => {
-            const op = a[0];
-            if (op === 1) {
-              const cmd = `ipset add blacklistv4 ${a[1]}`;
-              console.log(cmd); exec(cmd)
-            }
-          })
-
-          // remove and swap
-          fs.unlinkSync(ipsetCurrentFile);
-          fs.renameSync(ipsetNextFile, ipsetCurrentFile)
-
-
-          setTimeout(update, 60 * 1000)
+          setTimeout(update, 5 * 60 * 1000)
         })
-      });
+      })
+
+
+
     }
 
     update();
@@ -126,3 +154,17 @@ ipset.command('stream', {
   }
 })
 
+ipset.command('pm2', {
+  desc: 'Build PM2 command line',
+  callback: async function (options) {
+    const name = options.name; delete options.name;
+    const bin = `${__dirname}/index.js`
+    const cmd = `pm2 start -f ${bin} --name ${name} --cwd ${process.cwd()} -- ipset stream`
+
+    console.log(cmd)
+  }
+}).option('name', {
+  abbr: 'n',
+  desc: 'Name of the PM2 Process',
+  default: `plastering-ipset`
+});;
