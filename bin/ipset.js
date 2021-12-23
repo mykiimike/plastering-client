@@ -2,7 +2,6 @@ const sc = require('subcommander');
 const fs = require('fs');
 const readline = require("readline");
 const axios = require("axios");
-const { diffLinesRaw } = require('jest-diff');
 
 const { execSync } = require('child_process');
 
